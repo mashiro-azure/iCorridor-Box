@@ -1,0 +1,3 @@
+*
+!.gitignore
+!inference_custom_gpioRewrite_mutlithread_10fps_rewrite.py
