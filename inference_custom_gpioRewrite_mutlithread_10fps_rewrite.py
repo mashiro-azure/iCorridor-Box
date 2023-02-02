@@ -4,7 +4,7 @@ import time
 
 import cv2
 import imgui
-import Jetson.GPIO as GPIO
+#import Jetson.GPIO as GPIO
 import OpenGL.GL as gl
 import sdl2 as sdl
 import torch
@@ -15,7 +15,7 @@ from influxdb_client.client.write_api import ASYNCHRONOUS, WritePrecision
 VideoDevice = 1
 webcam_frame_width = 1280
 webcam_frame_height = 720
-GPIOLEDPin = 7
+# GPIOLEDPin = 7
 
 
 class CameraThread:
@@ -142,8 +142,8 @@ def main():
     model.eval()
 
     # Setup GPIO
-    GPIO.setmode(GPIO.BOARD)
-    GPIO.setup(GPIOLEDPin, GPIO.OUT, initial=GPIO.LOW)
+    #GPIO.setmode(GPIO.BOARD)
+    #GPIO.setup(GPIOLEDPin, GPIO.OUT, initial=GPIO.LOW)
 
     # Setup Image Capture
     video = CameraThread(src=VideoDevice, width=webcam_frame_width,
@@ -203,14 +203,14 @@ def main():
         # counting if there's any no_mask
         boxCount = output.pandas().xyxy[0]['class'].tolist().count(0)
         if boxCount >= 1 and cBoxLogToInfluxDB == True:
-            GPIO.output(GPIOLEDPin, GPIO.HIGH)
+            #GPIO.output(GPIOLEDPin, GPIO.HIGH)
             # maybe telegraf client here?
             # TODO:figure out this with thread(loggingToInfluxDB()
             #loggingThread = threading.Thread(target=loggingToInfluxDB, args=(noMaskCount,), daemon=True)
             # loggingThread.start()
             loggingToInfluxDB(boxCount)
-        else:
-            GPIO.output(GPIOLEDPin, GPIO.LOW)
+        #else:
+            #GPIO.output(GPIOLEDPin, GPIO.LOW)
 
         # SDL & imgui event polling
         while sdl.SDL_PollEvent(ctypes.byref(sdlEvent)) != 0:
