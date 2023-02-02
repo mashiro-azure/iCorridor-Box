@@ -4,7 +4,7 @@ import time
 
 import cv2
 import imgui
-#import Jetson.GPIO as GPIO
+# import Jetson.GPIO as GPIO
 import OpenGL.GL as gl
 import sdl2 as sdl
 import torch
@@ -83,10 +83,10 @@ def impl_pysdl2_init():
 
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DEPTH_SIZE, 24)
-    #sdl.SDL_GL_SetAttribute(sdl.SDL_GL_STENCIL_SIZE, 8)
+    # sdl.SDL_GL_SetAttribute(sdl.SDL_GL_STENCIL_SIZE, 8)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_ACCELERATED_VISUAL, 1)
-    #sdl.SDL_GL_SetAttribute(sdl.SDL_GL_MULTISAMPLEBUFFERS, 1)
-    #sdl.SDL_GL_SetAttribute(sdl.SDL_GL_MULTISAMPLESAMPLES, 16)
+    # sdl.SDL_GL_SetAttribute(sdl.SDL_GL_MULTISAMPLEBUFFERS, 1)
+    # sdl.SDL_GL_SetAttribute(sdl.SDL_GL_MULTISAMPLESAMPLES, 16)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_FLAGS,
                             sdl.SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MAJOR_VERSION, 4)
@@ -142,8 +142,8 @@ def main():
     model.eval()
 
     # Setup GPIO
-    #GPIO.setmode(GPIO.BOARD)
-    #GPIO.setup(GPIOLEDPin, GPIO.OUT, initial=GPIO.LOW)
+    # GPIO.setmode(GPIO.BOARD)
+    # GPIO.setup(GPIOLEDPin, GPIO.OUT, initial=GPIO.LOW)
 
     # Setup Image Capture
     video = CameraThread(src=VideoDevice, width=webcam_frame_width,
@@ -197,7 +197,7 @@ def main():
                 image = cv2.rectangle(
                     image, (xmin, ymin), (xmax, ymax), (97, 105, 255), 6)
                 image = cv2.rectangle(
-                    image, (xmin, ymin), (xmin+250, ymin-30), (97, 105, 255), -1)
+                    image, (xmin, ymin), (xmin+150, ymin-30), (97, 105, 255), -1)
                 image = cv2.putText(image, f'Box {box[4]:.2f}', (int(xmin), int(
                     ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
             # With Masks
@@ -213,7 +213,7 @@ def main():
                 image = cv2.rectangle(
                     image, (xmin, ymin), (xmax, ymax), (97, 105, 255), 6)
                 image = cv2.rectangle(
-                    image, (xmin, ymin), (xmin+250, ymin-30), (97, 105, 255), -1)
+                    image, (xmin, ymin), (xmin+210, ymin-30), (97, 105, 255), -1)
                 image = cv2.putText(image, 'Without Mask', (int(xmin), int(
                     ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
@@ -222,21 +222,20 @@ def main():
                 image = cv2.rectangle(
                     image, (xmin, ymin), (xmax, ymax), (152, 200, 250), 2)
 
-
         video.bind(image=image)
 
         # GPIO and logging stuff
         # counting if there's any no_mask
         noMaskCount = output.pandas().xyxy[0]['class'].tolist().count(2)
         if noMaskCount >= 1 and cBoxLogToInfluxDB == True:
-            #GPIO.output(GPIOLEDPin, GPIO.HIGH)
+            # GPIO.output(GPIOLEDPin, GPIO.HIGH)
             # maybe telegraf client here?
             # TODO:figure out this with thread(loggingToInfluxDB()
-            #loggingThread = threading.Thread(target=loggingToInfluxDB, args=(noMaskCount,), daemon=True)
+            # loggingThread = threading.Thread(target=loggingToInfluxDB, args=(noMaskCount,), daemon=True)
             # loggingThread.start()
             loggingToInfluxDB(noMaskCount)
-        #else:
-            #GPIO.output(GPIOLEDPin, GPIO.LOW)
+        # else:
+            # GPIO.output(GPIOLEDPin, GPIO.LOW)
 
         # SDL & imgui event polling
         while sdl.SDL_PollEvent(ctypes.byref(sdlEvent)) != 0:
@@ -267,6 +266,14 @@ def main():
                 min_value=0.0, max_value=1.0,
                 format="%.2f"
             )
+            _, cBoxWithMaskClass = imgui.checkbox(
+                "With Mask", cBoxWithMaskClass)
+            _, maskThreshold = imgui.slider_float(
+                "Mask Threshold", maskThreshold, min_value=0.0, max_value=1.0, format="%.2f")
+            _, cBoxWithoutMaskClass = imgui.checkbox(
+                "Without Mask", cBoxWithoutMaskClass)
+            _, cBoxWrongMaskClass = imgui.checkbox(
+                "Masks Worn Incorrectly.", cBoxWrongMaskClass)
             imgui.end()
 
         if (showImageTexture):
@@ -286,9 +293,9 @@ def main():
                 maxHeadCount = nowHeadCount
             with imgui.font(newFont):
                 imgui.text(
-                    f"Boxes in view: {nowHeadCount}\tRecorded max boxes in view: {maxHeadCount}")
+                    f"Person in view: {nowHeadCount}\tRecorded max person in view: {maxHeadCount}")
                 imgui.new_line()
-                imgui.text(f"{timeRetain}: Box detected.")
+                imgui.text(f"{timeRetain}: Person with No Mask detected.")
             imgui.end()
 
         gl.glClearColor(clearColorRGB[0],
