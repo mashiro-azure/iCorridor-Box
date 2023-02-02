@@ -136,7 +136,7 @@ def main():
     # Setup YOLOv5
     devices = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = torch.hub.load(
-        'yolov5', 'custom', path='20221201-boxRecognition-300epoch-yolov5s.pt', source="local")
+        'yolov5', 'custom', path='20230122-mixedDataset-300epoch.pt', source="local")
     #   Path to yolov5, 'custom', path to weight, source='local'
     model.to(devices)
     model.eval()
@@ -171,6 +171,10 @@ def main():
     showCustomWindow = True
     cBoxBoxClass = True
     boxThreshold = 0.4
+    cBoxWithMaskClass = True
+    maskThreshold = 0.4
+    cBoxWithoutMaskClass = True
+    cBoxWrongMaskClass = True
     showloggingWindow = True
     cBoxLogToInfluxDB = False
     maxHeadCount = 0
@@ -196,19 +200,41 @@ def main():
                     image, (xmin, ymin), (xmin+250, ymin-30), (97, 105, 255), -1)
                 image = cv2.putText(image, f'Box {box[4]:.2f}', (int(xmin), int(
                     ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # With Masks
+            if cBoxWithMaskClass == True and box[5] == 1 and box[4] > maskThreshold:
+                image = cv2.rectangle(
+                    image, (xmin, ymin), (xmax, ymax), (119, 221, 119), 6)
+                image = cv2.rectangle(
+                    image, (xmin, ymin), (xmin+250, ymin-30), (119, 221, 119), -1)
+                image = cv2.putText(image, f'With Mask {box[4]:.2f}', (int(xmin), int(
+                    ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            # Without Masks
+            if cBoxWithoutMaskClass == True and box[5] == 2:
+                image = cv2.rectangle(
+                    image, (xmin, ymin), (xmax, ymax), (97, 105, 255), 6)
+                image = cv2.rectangle(
+                    image, (xmin, ymin), (xmin+250, ymin-30), (97, 105, 255), -1)
+                image = cv2.putText(image, 'Without Mask', (int(xmin), int(
+                    ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2, cv2.LINE_AA)
+
+            # Masks Worn Incorrectly
+            if cBoxWrongMaskClass == True and box[5] == 3:
+                image = cv2.rectangle(
+                    image, (xmin, ymin), (xmax, ymax), (152, 200, 250), 2)
+
 
         video.bind(image=image)
 
         # GPIO and logging stuff
         # counting if there's any no_mask
-        boxCount = output.pandas().xyxy[0]['class'].tolist().count(0)
-        if boxCount >= 1 and cBoxLogToInfluxDB == True:
+        noMaskCount = output.pandas().xyxy[0]['class'].tolist().count(2)
+        if noMaskCount >= 1 and cBoxLogToInfluxDB == True:
             #GPIO.output(GPIOLEDPin, GPIO.HIGH)
             # maybe telegraf client here?
             # TODO:figure out this with thread(loggingToInfluxDB()
             #loggingThread = threading.Thread(target=loggingToInfluxDB, args=(noMaskCount,), daemon=True)
             # loggingThread.start()
-            loggingToInfluxDB(boxCount)
+            loggingToInfluxDB(noMaskCount)
         #else:
             #GPIO.output(GPIOLEDPin, GPIO.LOW)
 
@@ -254,7 +280,7 @@ def main():
         if (showloggingWindow):
             expandloggingWindow, showloggingWindow = imgui.begin(
                 "logging", True)
-            if boxCount > 0:
+            if noMaskCount > 0:
                 timeRetain = timeNow
             if nowHeadCount > maxHeadCount:
                 maxHeadCount = nowHeadCount
