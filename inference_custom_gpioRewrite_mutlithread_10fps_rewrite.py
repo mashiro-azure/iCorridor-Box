@@ -10,7 +10,8 @@ import sdl2 as sdl
 import torch
 from imgui.integrations.sdl2 import SDL2Renderer
 from influxdb_client import InfluxDBClient, Point
-from influxdb_client.client.write_api import ASYNCHRONOUS, WritePrecision
+from influxdb_client.client.write_api import SYNCHRONOUS, WritePrecision
+from influxdb_client.client.exceptions import InfluxDBError
 
 VideoDevice = 1
 webcam_frame_width = 1280
@@ -121,14 +122,21 @@ def impl_pysdl2_init():
 
     return window, gl_context
 
+# 3 FPS impact (TODO: switch to threading?)
+
 
 def loggingToInfluxDB(noMaskCount):
     bucket = "maskAI"
-    client = InfluxDBClient.from_config_file("influxdb.ini")
-    write_api = client.write_api(write_options=ASYNCHRONOUS)
-
-    p = Point("no_mask").field("amount", noMaskCount)
-    write_api.write(bucket=bucket, record=p, write_precision=WritePrecision.S)
+    with InfluxDBClient.from_config_file("influxdb.ini") as client:
+        try:
+            DBHealth = client.health()
+            if DBHealth.status == "pass":
+                p = Point("no_mask").field("amount", noMaskCount)
+                client.write_api(write_options=SYNCHRONOUS).write(
+                    bucket=bucket, record=p, write_precision=WritePrecision.S)
+        except InfluxDBError as e:
+            pass
+    return str(DBHealth.message)
 
 
 def main():
@@ -154,6 +162,8 @@ def main():
 
     # Setup logging
     timeRetain = ""
+    DBhealth = loggingToInfluxDB(0)
+    timeEpoch = time.time()
 
     # Setup imgui
     imgui.create_context()  # type: ignore
@@ -224,19 +234,6 @@ def main():
 
         video.bind(image=image)
 
-        # GPIO and logging stuff
-        # counting if there's any no_mask
-        noMaskCount = output.pandas().xyxy[0]['class'].tolist().count(2)
-        if noMaskCount >= 1 and cBoxLogToInfluxDB == True:
-            # GPIO.output(GPIOLEDPin, GPIO.HIGH)
-            # maybe telegraf client here?
-            # TODO:figure out this with thread(loggingToInfluxDB()
-            # loggingThread = threading.Thread(target=loggingToInfluxDB, args=(noMaskCount,), daemon=True)
-            # loggingThread.start()
-            loggingToInfluxDB(noMaskCount)
-        # else:
-            # GPIO.output(GPIOLEDPin, GPIO.LOW)
-
         # SDL & imgui event polling
         while sdl.SDL_PollEvent(ctypes.byref(sdlEvent)) != 0:
             if sdlEvent.type == sdl.SDL_QUIT:
@@ -256,7 +253,7 @@ def main():
             imgui.new_line()
             imgui.text(f"Total Threads: {threading.active_count()}")
             _, cBoxLogToInfluxDB = imgui.checkbox(
-                "Log to InfluxDB", cBoxLogToInfluxDB)
+                "Log to InfluxDB (experimental feature)", cBoxLogToInfluxDB)
             imgui.new_line()
             imgui.text("Settings:")
             _, cBoxBoxClass = imgui.checkbox(
@@ -282,8 +279,12 @@ def main():
             imgui.image(video.texture, frame_width, frame_height)
             imgui.end()
 
+        # Logging stuff
         timeNow = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        # TODO: separate box and head count
         nowHeadCount = len(output.pandas().xyxy[0].index)
+        # counting if there's any no_mask
+        noMaskCount = output.pandas().xyxy[0]['class'].tolist().count(2)
         if (showloggingWindow):
             expandloggingWindow, showloggingWindow = imgui.begin(
                 "logging", True)
@@ -291,11 +292,15 @@ def main():
                 timeRetain = timeNow
             if nowHeadCount > maxHeadCount:
                 maxHeadCount = nowHeadCount
+            if noMaskCount >= 1 and cBoxLogToInfluxDB == True and time.time() > timeEpoch+1:
+                DBhealth = loggingToInfluxDB(noMaskCount)
             with imgui.font(newFont):
                 imgui.text(
                     f"Person in view: {nowHeadCount}\tRecorded max person in view: {maxHeadCount}")
                 imgui.new_line()
                 imgui.text(f"{timeRetain}: Person with No Mask detected.")
+                imgui.new_line()
+                imgui.text(f"InfluxDB Health: {DBhealth}")
             imgui.end()
 
         gl.glClearColor(clearColorRGB[0],
