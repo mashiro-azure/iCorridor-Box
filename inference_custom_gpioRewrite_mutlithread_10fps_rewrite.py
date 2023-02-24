@@ -123,8 +123,6 @@ def impl_pysdl2_init():
     return window, gl_context
 
 # 3 FPS impact (TODO: switch to threading?)
-
-
 def loggingToInfluxDB(noMaskCount):
     bucket = "maskAI"
     with InfluxDBClient.from_config_file("influxdb.ini") as client:
