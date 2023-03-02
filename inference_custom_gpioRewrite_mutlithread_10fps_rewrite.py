@@ -1,6 +1,7 @@
 import ctypes
 import threading
 import time
+import re
 
 import cv2
 import imgui
@@ -119,6 +120,7 @@ def impl_pysdl2_init():
         print("Warning: Unable to set VSync! SDL Error: " +
               sdl.SDL_GetError().decode("utf-8"))
         exit(1)
+    sdl.SDL_GL_SetSwapInterval(0)
 
     return window, gl_context
 
@@ -243,6 +245,7 @@ def main():
         imgui.new_frame()          # type: ignore
 
         if (showCustomWindow):
+            preprocess_time, inference_time, NMS_time = re.findall(r'[\d\.\d]+(?=ms)', str(output))
             expandCustomWindow, showCustomWindow = imgui.begin(
                 "sdlWindow", True)
             imgui.text(f"FPS: {io.framerate:.2f}")
@@ -250,6 +253,8 @@ def main():
                 "Background Color", *clearColorRGB)
             imgui.new_line()
             imgui.text(f"Total Threads: {threading.active_count()}")
+            imgui.new_line()
+            imgui.text(f"Pre: {preprocess_time}ms Inf: {inference_time}ms NMS: {NMS_time}ms")
             _, cBoxLogToInfluxDB = imgui.checkbox(
                 "Log to InfluxDB (experimental feature)", cBoxLogToInfluxDB)
             imgui.new_line()
@@ -298,7 +303,7 @@ def main():
                 imgui.new_line()
                 imgui.text(f"{timeRetain}: Person with No Mask detected.")
                 imgui.new_line()
-                imgui.text(f"InfluxDB Health: {DBhealth}")
+                imgui.text_wrapped(f"InfluxDB Health: {DBhealth}")
             imgui.end()
 
         gl.glClearColor(clearColorRGB[0],
