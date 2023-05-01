@@ -15,7 +15,7 @@ from influxdb_client.client.write_api import SYNCHRONOUS, WritePrecision
 from influxdb_client.client.exceptions import InfluxDBError
 
 VideoDevice = 1
-webcam_frame_width = 1280
+webcam_frame_width = 2560
 webcam_frame_height = 720
 # GPIOLEDPin = 7
 
@@ -83,8 +83,8 @@ def impl_pysdl2_init():
               sdl.SDL_GetError().decode("utf-8"))
         exit(1)
 
-    sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1)
-    sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DEPTH_SIZE, 24)
+    #sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DOUBLEBUFFER, 1)
+    #sdl.SDL_GL_SetAttribute(sdl.SDL_GL_DEPTH_SIZE, 24)
     # sdl.SDL_GL_SetAttribute(sdl.SDL_GL_STENCIL_SIZE, 8)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_ACCELERATED_VISUAL, 1)
     # sdl.SDL_GL_SetAttribute(sdl.SDL_GL_MULTISAMPLEBUFFERS, 1)
@@ -94,10 +94,10 @@ def impl_pysdl2_init():
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MAJOR_VERSION, 4)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_MINOR_VERSION, 6)
     sdl.SDL_GL_SetAttribute(sdl.SDL_GL_CONTEXT_PROFILE_MASK,
-                            sdl.SDL_GL_CONTEXT_PROFILE_CORE)
+                            sdl.SDL_GL_CONTEXT_PROFILE_COMPATIBILITY)
 
-    sdl.SDL_SetHint(sdl.SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK, b"1")
-    sdl.SDL_SetHint(sdl.SDL_HINT_VIDEO_HIGHDPI_DISABLED, b"1")
+    #sdl.SDL_SetHint(sdl.SDL_HINT_MAC_CTRL_CLICK_EMULATE_RIGHT_CLICK, b"1")
+    #sdl.SDL_SetHint(sdl.SDL_HINT_VIDEO_HIGHDPI_DISABLED, b"1")
 
     window = sdl.SDL_CreateWindow(window_name.encode('utf-8'),
                                   sdl.SDL_WINDOWPOS_CENTERED, sdl.SDL_WINDOWPOS_CENTERED,
@@ -144,7 +144,7 @@ def main():
     # Setup YOLOv5
     devices = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = torch.hub.load(
-        'yolov5', 'custom', path='20230122-mixedDataset-300epoch.pt', source="local")
+        'yolov5', 'custom', path='models/20230122-mixedDataset-300epoch.pt', source="local")
     #   Path to yolov5, 'custom', path to weight, source='local'
     model.to(devices)
     model.eval()
