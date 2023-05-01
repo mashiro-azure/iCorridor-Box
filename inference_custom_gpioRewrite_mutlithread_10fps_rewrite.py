@@ -267,6 +267,7 @@ def main():
     showloggingWindow = True
     cBoxLogToInfluxDB = False
     maxHeadCount = 0
+    maxBoxCount = 0
     showImageTexture = True
 
     while running:
@@ -402,16 +403,24 @@ def main():
 
         # Logging stuff
         timeNow = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-        # TODO: separate box and head count
-        nowHeadCount = len(output.pandas().xyxy[0].index)
-        # counting if there's any no_mask
-        noMaskCount = output.pandas().xyxy[0]["class"].tolist().count(2)
+        # Separate box and head count. 0 = box, 1 = mask, 2 = wo_mask, 3 = wrong_mask
+        # There should be a better way of doing this...
+        output_df = output.pandas().xyxy[0]["class"].tolist()
+        boxCount = output_df.count(0)
+        withMaskCount = output_df.count(1)
+        noMaskCount = output_df.count(2)
+        wrongMaskCount = output_df.count(3)
+
+        nowHeadCount = withMaskCount + noMaskCount + wrongMaskCount
+
         if showloggingWindow:
             expandloggingWindow, showloggingWindow = imgui.begin("logging", True)
             if noMaskCount > 0:
                 timeRetain = timeNow
             if nowHeadCount > maxHeadCount:
                 maxHeadCount = nowHeadCount
+            if boxCount > maxBoxCount:
+                maxBoxCount = boxCount
             if (
                 noMaskCount >= 1
                 and cBoxLogToInfluxDB == True
@@ -421,6 +430,9 @@ def main():
             with imgui.font(newFont):
                 imgui.text(
                     f"Person in view: {nowHeadCount}\tRecorded max person in view: {maxHeadCount}"
+                )
+                imgui.text(
+                    f"Box in view: {boxCount}\t\tRecorded max boxes in view: {maxBoxCount}"
                 )
                 imgui.new_line()
                 imgui.text(f"{timeRetain}: Person with No Mask detected.")
